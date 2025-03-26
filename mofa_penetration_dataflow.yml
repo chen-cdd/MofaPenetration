@@ -1,0 +1,56 @@
+nodes:
+  - id: dora-openai-server
+    build: pip install -e ../../node-hub/dora-openai-server
+    path: ../../node-hub/dora-openai-server
+    outputs:
+      - v1/chat/completions
+    inputs: {}
+
+  - id: user_terminal
+    operator:
+      python: ../scripts/user_terminal.py
+      outputs:
+        - query
+      inputs:
+        chat: dora-openai-server/v1/chat/completions
+
+  - id: planning_agent
+    operator:
+      python: ../scripts/planning_agent_wrapper.py
+      inputs:
+        input: user_terminal/query
+      outputs:
+        - output
+
+  - id: execution_agent
+    operator:
+      python: ../scripts/execution_agent_wrapper.py
+      inputs:
+        input: planning_agent/output
+      outputs:
+        - output
+
+  - id: integration_agent
+    operator:
+      python: ../scripts/integration_agent_wrapper.py
+      inputs:
+        input: execution_agent/output
+      outputs:
+        - output
+
+  - id: memory_store
+    operator:
+      python: ../scripts/memory_store_wrapper.py
+      inputs:
+        input: execution_agent/output
+      outputs:
+        - output
+
+  - id: memory_retrieval
+    operator:
+      python: ../scripts/memory_retrieval_wrapper.py
+      inputs:
+        query: user_terminal/query
+        storage: memory_store/output
+      outputs:
+        - output
